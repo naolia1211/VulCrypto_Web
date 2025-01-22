@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Page</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container">
+        <div class="row justify-content-center mt-5">
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <h3 class="card-title text-center mb-4">Login</h3>
+                        <form id="loginForm">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email address</label>
+                                <input type="email" class="form-control" id="email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="password" required>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">Login</button>
+                            </div>
+                            <div id="errorMessage" class="alert alert-danger mt-3" style="display: none;">
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            // Basic email validation
+            if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = 'Please enter a valid email address';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            const password = document.getElementById('password').value;
+            // Basic password validation
+            if (password.length < 1) {
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = 'Password cannot be empty';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            const errorMessage = document.getElementById('errorMessage');
+
+            try {
+                // Define base URL and origin for easier configuration
+                const API_BASE_URL = 'http://127.0.0.1:8000';
+                const API_URL = `${API_BASE_URL}/api/auth/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`;
+                
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Origin': 'http://127.0.0.1:5500'  // Match the allow_origins in backend
+                    },
+                    credentials: 'include'
+                });
+
+                let data;
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    throw new Error('Server response was not JSON');
+                }
+
+                if (response.ok) {
+                    errorMessage.style.display = 'none';
+                    console.log('Login successful:', data);
+                    if (data.access_token) {
+                        // Store the token if needed
+                        localStorage.setItem('access_token', data.access_token);
+                        // Show alert message
+                        alert('Login successful!');
+                        // Show success message in the UI
+                        const successMessage = document.getElementById('errorMessage');
+                        successMessage.className = 'alert alert-success mt-3';
+                        successMessage.textContent = 'Login successful!';
+                        successMessage.style.display = 'block';
+                    }
+                } else {
+                    alert('Login failed: ' + (data.detail || 'Invalid credentials'));
+                    errorMessage.textContent = data.detail || 'Login failed';
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error details:', error);
+                
+                let errorText = '';
+                if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+                    errorText = 'Unable to connect to the server. Please check:\n' +
+                        '1. The server is running\n' +
+                        '2. The server URL is correct (currently using http://127.0.0.1:8000)\n' +
+                        '3. There are no CORS issues';
+                } else if (error.message === 'Server response was not JSON') {
+                    errorText = 'Invalid server response format. Please check the server endpoint.';
+                } else {
+                    errorText = `Error: ${error.message}`;
+                }
+                alert(errorText);
+                errorMessage.textContent = errorText;
+                errorMessage.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
